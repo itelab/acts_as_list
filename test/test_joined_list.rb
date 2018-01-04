@@ -38,6 +38,46 @@ class JoinedTestCase < Minitest::Test
   end
 end
 
+class JoinedIndexTestCase < MiniTest::Test
+  def setup
+    ActiveRecord::Base.connection.create_table :sections do |t|
+      t.column :position, :integer
+      t.column :visible, :boolean, default: true
+
+      t.index :position, unique: true
+    end
+
+    ActiveRecord::Base.connection.create_table :items do |t|
+      t.column :position, :integer
+      t.column :section_id, :integer
+      t.column :visible, :boolean, default: true
+
+      t.index %I[section_id position], unique: true
+    end
+
+    ActiveRecord::Base.connection.schema_cache.clear!
+    [Section, Item].each(&:reset_column_information)
+    super
+  end
+
+  def teardown
+    teardown_db
+    super
+  end
+end
+
+class TestInsertionWithIndex < JoinedIndexTestCase
+  def test_update_at_position
+    section = Section.create
+
+    Item.create section: section
+    Item.create section: section
+    item3 = Item.create section: section
+
+    assert_equal item3.update(position: 1), true
+  end
+end
+
 # joining the relation returned by `#higher_items` or `#lower_items` to another table
 # previously could result in ambiguous column names in the query
 class TestHigherLowerItems < JoinedTestCase
