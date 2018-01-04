@@ -74,7 +74,7 @@ class TestInsertionWithIndex < JoinedIndexTestCase
     Item.create section: section
     item3 = Item.create section: section
 
-    assert_equal item3.update(position: 1), true
+    assert_equal item3.insert_at(1), true
   end
 end
 

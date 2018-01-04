@@ -20,12 +20,27 @@ module ActiveRecord::Acts::List::PositionColumnMethodDefiner #:nodoc:
         @_quoted_position_column_with_table_name ||= "#{caller_class.quoted_table_name}.#{quoted_position_column}"
       end
 
+      define_singleton_method :position_column_contains_index? do
+        @_position_column_contains_index ||= connection.indexes(caller_class.table_name)
+                                                       .select { |i| i.columns.include?(position_column) }
+                                                       .any?
+      end
+
       define_singleton_method :decrement_all do
-        update_all_with_touch "#{quoted_position_column} = (#{quoted_position_column_with_table_name} - 1)"
+        if position_column_contains_index?
+          order("#{quoted_position_column_with_table_name} ASC").update_all_with_touch "#{quoted_position_column} = (#{quoted_position_column_with_table_name} - 1)"
+        else
+          update_all_with_touch "#{quoted_position_column} = (#{quoted_position_column_with_table_name} - 1)"
+        end
       end
 
       define_singleton_method :increment_all do
-        update_all_with_touch "#{quoted_position_column} = (#{quoted_position_column_with_table_name} + 1)"
+        if position_column_contains_index?
+          order("#{quoted_position_column_with_table_name} DESC").update_all_with_touch "#{quoted_position_column} = (#{quoted_position_column_with_table_name} + 1)"
+        else
+          update_all_with_touch "#{quoted_position_column} = (#{quoted_position_column_with_table_name} + 1)"
+        end
+
       end
 
       define_singleton_method :update_all_with_touch do |updates|
